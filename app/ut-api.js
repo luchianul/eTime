@@ -116,6 +116,13 @@
       withFailureHandler: function (f) { h.failure = f; return o; },
       withUserObject: function () { return o; },
       getSheetData: function () { readRows(h); },
+      getSettings: function () {
+        if (url() && online() && !queue.length) return post('getSettings', []).then(function (j) { cache.settings = j.result || null; save(); ok(h, cache.settings); },
+          function () { cache.settings !== undefined ? ok(h, cache.settings) : (h.failure && h.failure(new Error('Setările nu se pot citi acum'))); });
+        if (cache.settings !== undefined) return ok(h, cache.settings);
+        if (h.failure) setTimeout(function () { h.failure(new Error('Setările nu se pot citi acum')); }, 0);
+      },
+      saveSettings: function (c) { cache.settings = clone(c); enqueue('saveSettings', [c]); ok(h, c); },
       saveData: function (p) {
         p = clone(p || {});
         applyLocal(p); enqueue('saveData', [p]);

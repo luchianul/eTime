@@ -113,6 +113,7 @@
 
     <div id="page-home" class="page active">
         <div class="header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;"></div>
+        <div id="cycleWarn" class="card hidden" style="background:#fff7ed; border-color:#fed7aa; font-size:13px; font-weight:700; color:#9a3412;">⚠️ Ciclul curent are peste un an. Dacă ai primit recalculul, pune în Setări data citirii de pornire noi.</div>
         <div class="card"><span class="card-label">⚡ Electricitate</span><div class="card-value"><span id="currElec">0</span> <small style="font-size:14px; color:#94a3b8">/ 2682 kWh</small></div><div class="progress-track"><div id="barElec" class="progress-bar" style="background: var(--elec);"></div></div><div id="predElec" class="prediction-box">Analizăm...</div></div>
         <div class="card"><span class="card-label">🔥 Gaz</span><div class="card-value"><span id="currGaz">0</span> <small style="font-size:14px; color:#94a3b8">/ 1215 m³</small></div><div class="progress-track"><div id="barGaz" class="progress-bar" style="background: var(--gas);"></div></div><div id="predGaz" class="prediction-box">Analizăm...</div></div>
         <div class="card"><span class="card-label">📊 Evoluție Consum</span><div style="height: 180px; margin-top: 15px;"><canvas id="consumptionChart"></canvas></div></div>
@@ -138,7 +139,7 @@
     <div id="page-settings" class="page">
         <h3>⚙️ Setări Contract</h3>
         <div class="card">
-            <label>Data Start Ciclului (ex: 2026-05-20)</label><input type="date" id="cfgStartDate" onchange="saveSettings()">
+            <label>Data citirii de pornire a ciclului (de la ea se adună consumul)</label><input type="date" id="cfgStartDate" onchange="saveSettings()">
             <label>Plată Lunară Elec (€)</label><input type="number" id="cfgPlataE" onchange="saveSettings()">
             <label>Plată Lunară Gaz (€)</label><input type="number" id="cfgPlataG" onchange="saveSettings()">
             <label>Preț kWh Elec (€)</label><input type="number" step="0.0001" id="cfgPretE" onchange="saveSettings()">
@@ -164,7 +165,7 @@
         const LIMITA_GAZ_M3 = LIMITA_GAZ_KWH / FACTOR_CONV_GAZ;
         const ASIGURARE_GAZ = 4.99;
 
-        let config = { startDate: '2026-05-20', plataE: 90.00, plataG: 100.00, pretE: 0.35, pretG: 0.90 };
+        let config = { startDate: '2026-05-22', plataE: 90.00, plataG: 100.00, pretE: 0.35, pretG: 0.90 };
         let myChart = null;
 
         // Parsează "yyyy-MM-dd" ca dată LOCALĂ (fără UTC shift)
@@ -183,17 +184,45 @@
             return new Date(d.getFullYear(), d.getMonth(), d.getDate());
         }
 
-        window.onload = () => {
-            const saved = localStorage.getItem('utilityConfig');
-            if (saved) config = JSON.parse(saved);
+        const DATA_VECHE = '2026-05-20';   // valoarea veche din Setări; ciclul real pornea de la 22 mai
+
+        function afiseazaSetari() {
             document.getElementById('cfgStartDate').value = config.startDate;
             document.getElementById('cfgPlataE').value = config.plataE;
             document.getElementById('cfgPlataG').value = config.plataG;
             document.getElementById('cfgPretE').value = config.pretE;
             document.getElementById('cfgPretG').value = config.pretG;
+        }
+
+        // Setările stau pe server (aceleași pe telefon și pe PC). Dacă serverul nu are încă, le urcă cele salvate pe acest dispozitiv.
+        function incarcaSetariServer() {
+            google.script.run
+                .withSuccessHandler(srv => {
+                    if (srv) {
+                        config = Object.assign(config, srv);
+                        localStorage.setItem('utilityConfig', JSON.stringify(config));
+                        afiseazaSetari();
+                        refreshData();
+                    } else if (localStorage.getItem('utilityConfig')) {
+                        if (config.startDate === DATA_VECHE) config.startDate = '2026-05-22';
+                        localStorage.setItem('utilityConfig', JSON.stringify(config));
+                        afiseazaSetari();
+                        google.script.run.withFailureHandler(() => {}).saveSettings(config);
+                        refreshData();
+                    }
+                })
+                .withFailureHandler(() => {})
+                .getSettings();
+        }
+
+        window.onload = () => {
+            const saved = localStorage.getItem('utilityConfig');
+            if (saved) config = JSON.parse(saved);
+            afiseazaSetari();
             document.getElementById('fData').value = aziIso();
             document.getElementById('landing-month').innerText = new Date().toLocaleString('ro-RO', { month: 'long', year: 'numeric' });
             refreshData();
+            incarcaSetariServer();
         };
 
         function aziIso() {
@@ -214,6 +243,7 @@
             config.pretE = parseFloat(document.getElementById('cfgPretE').value) || 0;
             config.pretG = parseFloat(document.getElementById('cfgPretG').value) || 0;
             localStorage.setItem('utilityConfig', JSON.stringify(config));
+            google.script.run.withFailureHandler(() => {}).saveSettings(config);
             refreshData();
         }
 
@@ -282,16 +312,9 @@
     let tE = 0, tG = 0, archE = 0, archG = 0;
     let monthlyData = {};
 
-    const CICLU_LUNA = 4;  // mai
-    const CICLU_ZI = 22;
     const azi = normalizeDate(new Date());
-
-    let anLimita = azi.getFullYear();
-    const limita_acest_an = new Date(anLimita, CICLU_LUNA, CICLU_ZI);
-    if (azi <= limita_acest_an) {
-        anLimita = anLimita - 1;
-    }
-    const LIMITA_DATA = new Date(anLimita, CICLU_LUNA, CICLU_ZI);
+    // Ciclul curent = citirile de DUPĂ data citirii de pornire din Setări (rândul de pornire în sine nu se adună)
+    const LIMITA_DATA = normalizeDate(parseLocalDate(config.startDate));
 
     data.slice().reverse().forEach(row => {
         if (!row[0]) return;
@@ -359,6 +382,7 @@
     const diffTime = Math.abs(azi - startObj);
     const zileTrecute = Math.max(1, diffTime / (1000 * 60 * 60 * 24));
     const zileTotale = 365; // Ciclul anual
+    document.getElementById('cycleWarn').classList.toggle('hidden', zileTrecute <= 366);
     const estE = (tE / zileTrecute) * zileTotale;
     const estG = (tG / zileTrecute) * zileTotale;
 

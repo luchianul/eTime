@@ -83,6 +83,36 @@ try:
         resp = json.loads(urllib.request.urlopen(urllib.request.Request('http://localhost:%d/exec' % MOCK, body, {'Content-Type': 'text/plain'})).read())
         check('functie necunoscuta refuzata', 'error' in resp, resp)
 
+        # setari comune: prețul se salveaza pe server si apare pe alt dispozitiv
+        props0 = json.loads(urllib.request.urlopen('http://localhost:%d/__props' % MOCK).read())
+        check('serverul nu avea setari inainte', 'settings' not in props0, props0)
+        page.click('.bottom-nav >> text=Setări')
+        page.fill('#cfgPretE', '0.42'); page.press('#cfgPretE', 'Tab')
+        page.wait_for_timeout(2500)
+        sv = json.loads(json.loads(urllib.request.urlopen('http://localhost:%d/__props' % MOCK).read()).get('settings', 'null'))
+        check('setari pe server: pret 0.42', sv and sv['pretE'] == 0.42, sv)
+        check('setari pe server: ciclul porneste de la 2026-05-22', sv and sv['startDate'] == '2026-05-22', sv)
+
+        ctx2 = b.new_context(viewport={'width': 390, 'height': 800})
+        pg2 = ctx2.new_page(); pg2.clock.set_fixed_time('2026-11-15T12:00:00')
+        pg2.goto('http://localhost:%d/?u=http://localhost:%d/exec' % (WEB, MOCK))
+        pg2.wait_for_function("document.getElementById('cfgPretE').value === '0.42'", timeout=15000)
+        check('alt dispozitiv primeste pretul de pe server', True)
+        props1 = json.loads(urllib.request.urlopen('http://localhost:%d/__props' % MOCK).read())
+        check('dispozitiv nou fara setari proprii nu suprascrie serverul', json.loads(props1['settings'])['pretE'] == 0.42)
+
+        # data de pornire a ciclului din Setari decide ce se aduna (rand de pornire exclus)
+        pg2.click('.btn-connect-white'); pg2.wait_for_timeout(1000); pg2.click('.bottom-nav >> text=Setări')
+        pg2.fill('#cfgStartDate', '2026-06-22'); pg2.press('#cfgStartDate', 'Tab')
+        pg2.wait_for_function("document.getElementById('currElec').innerText === '790'", timeout=10000)
+        check('start 22 iunie: 640 + 150 = 790 kWh', True)
+        check('fara avertisment de ciclu vechi', 'hidden' in pg2.get_attribute('#cycleWarn', 'class'))
+        pg2.fill('#cfgStartDate', '2025-01-01'); pg2.press('#cfgStartDate', 'Tab')
+        pg2.wait_for_function("!document.getElementById('cycleWarn').classList.contains('hidden')", timeout=10000)
+        check('avertisment cand ciclul are peste un an', True)
+        pg2.fill('#cfgStartDate', '2026-05-22'); pg2.press('#cfgStartDate', 'Tab')
+        ctx2.close()
+
         # adresa gresita in dialog
         page.click('.bottom-nav >> text=Setări'); page.click('text=Setează / schimbă adresa')
         page.fill('#ut-url', 'http://exemplu.ro'); page.click('text=Salvează și sincronizează')

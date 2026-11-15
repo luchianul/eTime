@@ -38,6 +38,7 @@ http.createServer((req, res) => {
   req.on('data', c => body += c);
   req.on('end', () => {
     if (req.url.startsWith('/__rows')) { res.end(JSON.stringify(sheet)); return; }
+    if (req.url.startsWith('/__props')) { res.end(JSON.stringify(props)); return; }
     if (req.url.startsWith('/__reset')) { sheet = seed(); props = {}; res.end('ok'); return; }
     if (req.url.startsWith('/__down')) { global.DOWN = true; res.end('ok'); return; }
     const o = ctx.doPost({ postData: { contents: body } });

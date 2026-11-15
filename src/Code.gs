@@ -19,7 +19,7 @@ function doGet() {
 }
 
 /** Funcțiile pe care aplicația instalată are voie să le cheme. */
-var API = { getSheetData: getSheetData, saveData: saveData };
+var API = { getSheetData: getSheetData, saveData: saveData, getSettings: getSettings, saveSettings: saveSettings };
 
 /**
  * Cerere de la aplicația instalată: { fn, args, opId }.
@@ -137,4 +137,18 @@ function opRetine_(id) {
 function opLista_() {
   try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('ops') || '[]'); }
   catch (e) { return []; }
+}
+
+// ---------- setări comune (prețuri, plăți, data ciclului): aceleași pe toate dispozitivele ----------
+function getSettings() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('settings') || 'null'); }
+  catch (e) { return null; }
+}
+
+function saveSettings(cfg) {
+  if (!cfg || !/^\d{4}-\d{2}-\d{2}$/.test(String(cfg.startDate))) throw new Error('Data de start invalidă');
+  var n = function (v) { var x = parseFloat(v); return isNaN(x) ? 0 : x; };
+  var curat = { startDate: String(cfg.startDate), plataE: n(cfg.plataE), plataG: n(cfg.plataG), pretE: n(cfg.pretE), pretG: n(cfg.pretG) };
+  PropertiesService.getScriptProperties().setProperty('settings', JSON.stringify(curat));
+  return curat;
 }
