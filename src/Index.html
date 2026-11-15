@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Utility Pro Gabriel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary: #6366f1; --bg: #f8fafc;
+            --elec: #f59e0b; --gas: #ef4444;
+            --nav-bg: rgba(255, 255, 255, 0.95);
+            --glass-white: rgba(255, 255, 255, 0.6);
+            --text-main: #1e293b;
+        }
+        #utilities-landing {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10000; transition: 0.8s cubic-bezier(0.7, 0, 0.3, 1);
+        }
+        .orb-container { display: flex; gap: 20px; margin-bottom: 40px; }
+        .orb {
+            width: 130px; height: 130px; border-radius: 50%;
+            background: var(--glass-white); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.8);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative;
+        }
+        .orb-electric { animation: energy-pulse 4s infinite ease-in-out; }
+        .orb-gas { animation: fluid-flow 5s infinite ease-in-out; }
+        @keyframes energy-pulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); transform: translateY(0); }
+            50% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.4); transform: translateY(-10px); }
+        }
+        @keyframes fluid-flow {
+            0%, 100% { border-radius: 50%; transform: translateY(0); }
+            50% { border-radius: 42% 58% 45% 55% / 55% 45% 58% 42%; transform: translateY(-15px); }
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 0; color: #1e293b; padding-bottom: 90px; }
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 75px; background: var(--nav-bg);
+            backdrop-filter: blur(15px); border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 1000; padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; text-decoration: none; font-size: 10px; font-weight: 700; flex: 1; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item span { font-size: 20px; margin-bottom: 4px; }
+        .page { display: none; padding: 20px; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: white; padding: 20px; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 15px; border: 1px solid #f1f5f9; }
+        .card-label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 800; }
+        .card-value { font-size: 26px; font-weight: 800; margin: 8px 0; }
+        .progress-track { height: 10px; background: #f1f5f9; border-radius: 10px; margin: 12px 0; overflow: hidden; }
+        .progress-bar { height: 100%; border-radius: 10px; transition: width 1s ease-in-out; }
+        .prediction-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 14px; margin-top: 10px; font-size: 12px; }
+        label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #64748b; }
+        input, select { width: 100%; padding: 14px; border-radius: 14px; border: 1px solid #e2e8f0; font-size: 16px; background: white; margin-bottom: 10px; }
+        .btn-save { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; font-size: 16px; margin-top: 10px; }
+        .table-mobile { width: 100%; border-collapse: collapse; }
+        .table-mobile tr { border-bottom: 1px solid #f1f5f9; }
+        .table-mobile td { padding: 12px 5px; font-size: 13px; }
+        .badge { padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; color: white; }
+        .badge-elec { background: var(--elec); }
+        .badge-gas { background: var(--gas); }
+        .hidden { display: none; }
+        .pwa-only { display: none; }
+        body.ut-pwa .pwa-only { display: block; }
+        .btn-container { position: relative; display: inline-block; margin-top: 20px; z-index: 10; }
+        .btn-connect-white { position: relative; z-index: 5; background: #ffffff; border: none; padding: 18px 50px; border-radius: 40px; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); transition: transform 0.2s; overflow: hidden; }
+        .fire-text { background: linear-gradient(0deg, #ff4d00 0%, #ffae00 50%, #3b82f6 100%); background-size: 100% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: text-burn 1.5s infinite alternate; display: inline-block; filter: drop-shadow(0 0 1px rgba(255, 77, 0, 0.8)); }
+        @keyframes text-burn { 0% { background-position: 0% 0%; filter: drop-shadow(0 0 2px #ff4d00); } 100% { background-position: 0% 100%; filter: drop-shadow(0 -2px 4px #ffae00); } }
+        .zap { position: absolute; width: 3px; height: 12px; background: #f59e0b; border-radius: 4px; z-index: 6; opacity: 0; pointer-events: none; }
+        .z1 { left: 0; top: 20%; animation: zap-anim 0.6s infinite 0.1s; }
+        .z2 { right: 5%; top: -10%; animation: zap-anim 0.4s infinite 0.3s; }
+        .z3 { left: 40%; top: -15%; animation: zap-anim 0.5s infinite 0.5s; }
+        .z4 { right: 0; bottom: 20%; animation: zap-anim 0.7s infinite 0.2s; }
+        @keyframes zap-anim { 0% { transform: scale(0) translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: scale(1.2) translateY(-25px) rotate(45deg); opacity: 0; } }
+        .signature { font-family: 'Dancing Script', cursive; font-size: 20px; color: #475569; margin-top: 25px; text-align: center; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <div id="utilities-landing">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -1px;">RESOURCE MONITOR</h2>
+            <div id="landing-month" class="status-text" style="color: var(--primary); font-weight: 800; font-size: 14px; text-transform: uppercase; margin-top: 5px;">Se încarcă...</div>
+        </div>
+        <div class="orb-container">
+            <div class="orb orb-electric"><span style="font-size: 10px; font-weight: 800; opacity: 0.5;">CURENT</span><span style="font-size: 18px; font-weight: 800;"><span id="lElec">0</span></span><div id="lTargetElec" style="font-size: 9px; font-weight: 800; margin-top: 5px;">---</div><span style="color: var(--elec); margin-top: 3px; font-size: 14px;">⚡</span></div>
+            <div class="orb orb-gas"><span style="font-size: 10px; font-weight: 800; opacity: 0.5;">GAZ</span><span style="font-size: 18px; font-weight: 800;"><span id="lGaz">0</span></span><div id="lTargetGaz" style="font-size: 9px; font-weight: 800; margin-top: 5px;">---</div><span style="color: var(--gas); margin-top: 3px; font-size: 14px;">🔥</span></div>
+        </div>
+        <div class="btn-container">
+            <div class="zap z1"></div><div class="zap z2"></div><div class="zap z3"></div><div class="zap z4"></div>
+            <button class="btn-connect-white" onclick="autorizeazaVizualizare()"><span class="fire-text">Vezi Detalii</span></button>
+        </div>
+        <div class="signature">Powered by VerTech</div>
+    </div>
+
+    <div id="page-home" class="page active">
+        <div class="header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;"></div>
+        <div class="card"><span class="card-label">⚡ Electricitate</span><div class="card-value"><span id="currElec">0</span> <small style="font-size:14px; color:#94a3b8">/ 2682 kWh</small></div><div class="progress-track"><div id="barElec" class="progress-bar" style="background: var(--elec);"></div></div><div id="predElec" class="prediction-box">Analizăm...</div></div>
+        <div class="card"><span class="card-label">🔥 Gaz</span><div class="card-value"><span id="currGaz">0</span> <small style="font-size:14px; color:#94a3b8">/ 1215 m³</small></div><div class="progress-track"><div id="barGaz" class="progress-bar" style="background: var(--gas);"></div></div><div id="predGaz" class="prediction-box">Analizăm...</div></div>
+        <div class="card"><span class="card-label">📊 Evoluție Consum</span><div style="height: 180px; margin-top: 15px;"><canvas id="consumptionChart"></canvas></div></div>
+    </div>
+
+    <div id="page-add" class="page">
+        <h3>➕ Adaugă Citire</h3>
+        <div class="card">
+            <label>Data</label><input type="date" id="fData">
+            <label>Utilitate</label>
+            <select id="fServiciu" onchange="toggleInputs()"><option value="Electricitate">Electricitate ⚡</option><option value="Gaz">Gaz 🔥</option></select>
+            <label id="lblIdx1">Index Zi</label><input type="number" id="fIdx1" pattern="\d*" inputmode="decimal">
+            <div id="boxIdx2"><label>Index Noapte</label><input type="number" id="fIdx2" pattern="\d*" inputmode="decimal"></div>
+            <button class="btn-save" onclick="handleSave()">Salvează Datele</button>
+        </div>
+    </div>
+
+    <div id="page-history" class="page">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"><h3 style="margin:0">📜 Istoric</h3><select id="filterAn" onchange="refreshData()" style="width: auto; padding: 8px; font-size: 12px; margin:0"><option value="current">Ciclu Curent</option><option value="archive">Arhivă</option></select></div>
+        <div class="card" style="padding: 10px;"><table class="table-mobile" id="mainTable"><tbody></tbody></table></div>
+    </div>
+
+    <div id="page-settings" class="page">
+        <h3>⚙️ Setări Contract</h3>
+        <div class="card">
+            <label>Data Start Ciclului (ex: 2026-05-20)</label><input type="date" id="cfgStartDate" onchange="saveSettings()">
+            <label>Plată Lunară Elec (€)</label><input type="number" id="cfgPlataE" onchange="saveSettings()">
+            <label>Plată Lunară Gaz (€)</label><input type="number" id="cfgPlataG" onchange="saveSettings()">
+            <label>Preț kWh Elec (€)</label><input type="number" step="0.0001" id="cfgPretE" onchange="saveSettings()">
+            <label>Preț m³ Gaz (€)</label><input type="number" step="0.0001" id="cfgPretG" onchange="saveSettings()">
+        </div>
+        <div class="card pwa-only">
+            <label>☁️ Sincronizare Google Sheet</label>
+            <button class="btn-save" style="margin-top:0" onclick="utSettings && utSettings()">Setează / schimbă adresa</button>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" onclick="showPage('home', this)"><span>🏠</span>Home</a>
+        <a href="#" class="nav-item" onclick="showPage('add', this)"><span>➕</span>Adaugă</a>
+        <a href="#" class="nav-item" onclick="showPage('history', this)"><span>📜</span>Istoric</a>
+        <a href="#" class="nav-item" onclick="showPage('settings', this)"><span>⚙️</span>Setări</a>
+    </nav>
+
+    <script>
+        const LIMITA_ELEC_KWH = 2682.69;
+        const LIMITA_GAZ_KWH = 12818.48; 
+        const FACTOR_CONV_GAZ = 10.55; 
+        const LIMITA_GAZ_M3 = LIMITA_GAZ_KWH / FACTOR_CONV_GAZ;
+        const ASIGURARE_GAZ = 4.99;
+
+        let config = { startDate: '2026-05-20', plataE: 90.00, plataG: 100.00, pretE: 0.35, pretG: 0.90 };
+        let myChart = null;
+
+        // Parsează "yyyy-MM-dd" ca dată LOCALĂ (fără UTC shift)
+        function parseLocalDate(str) {
+            if (!str) return null;
+            if (typeof str === 'string' && str.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const [y, m, d] = str.split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+            if (str instanceof Date) return str;
+            return new Date(str);
+        }
+
+        // Normalizează orice dată la miezul nopții local, pentru comparații corecte zi-cu-zi
+        function normalizeDate(d) {
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        }
+
+        window.onload = () => {
+            const saved = localStorage.getItem('utilityConfig');
+            if (saved) config = JSON.parse(saved);
+            document.getElementById('cfgStartDate').value = config.startDate;
+            document.getElementById('cfgPlataE').value = config.plataE;
+            document.getElementById('cfgPlataG').value = config.plataG;
+            document.getElementById('cfgPretE').value = config.pretE;
+            document.getElementById('cfgPretG').value = config.pretG;
+            document.getElementById('fData').value = aziIso();
+            refreshData();
+        };
+
+        function aziIso() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function autorizeazaVizualizare() {
+            const landing = document.getElementById('utilities-landing');
+            landing.style.opacity = '0';
+            setTimeout(() => { landing.style.display = 'none'; }, 800);
+        }
+
+        function saveSettings() {
+            config.startDate = document.getElementById('cfgStartDate').value;
+            config.plataE = parseFloat(document.getElementById('cfgPlataE').value) || 0;
+            config.plataG = parseFloat(document.getElementById('cfgPlataG').value) || 0;
+            config.pretE = parseFloat(document.getElementById('cfgPretE').value) || 0;
+            config.pretG = parseFloat(document.getElementById('cfgPretG').value) || 0;
+            localStorage.setItem('utilityConfig', JSON.stringify(config));
+            refreshData();
+        }
+
+        function showPage(pageId, el) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            el.classList.add('active');
+        }
+
+        function toggleInputs() {
+            const isG = document.getElementById('fServiciu').value === 'Gaz';
+            document.getElementById('boxIdx2').classList.toggle('hidden', isG);
+            document.getElementById('lblIdx1').innerText = isG ? "Index Gaz" : "Index Zi";
+        }
+
+        function ultimulIndex(serv) {
+            const rows = window.LAST_ROWS || [];
+            for (let i = rows.length - 1; i >= 0; i--) {
+                if (rows[i][1] === serv) return serv === 'Gaz' ? { g: parseFloat(rows[i][4]) || 0 } : { z: parseFloat(rows[i][2]) || 0, n: parseFloat(rows[i][3]) || 0 };
+            }
+            return null;
+        }
+
+        function handleSave() {
+            const serv = document.getElementById('fServiciu').value, isG = serv === 'Gaz';
+            const v1 = document.getElementById('fIdx1').value, v2 = document.getElementById('fIdx2').value;
+            if (!document.getElementById('fData').value || v1 === '' || (!isG && v2 === '')) {
+                Swal.fire({ icon: 'warning', title: 'Completează toate câmpurile' });
+                return;
+            }
+            const last = ultimulIndex(serv);
+            const scade = last && (isG ? parseFloat(v1) < last.g : (parseFloat(v1) < last.z || parseFloat(v2) < last.n));
+            if (scade) {
+                Swal.fire({ icon: 'question', title: 'Indexul e mai mic decât ultimul', text: 'Consumul ar ieși negativ. Salvezi oricum?', showCancelButton: true, confirmButtonText: 'Salvează oricum', cancelButtonText: 'Revin' })
+                    .then(r => { if (r.isConfirmed) doSave(); });
+                return;
+            }
+            doSave();
+        }
+
+        function doSave() {
+            const isG = document.getElementById('fServiciu').value === 'Gaz';
+            const p = { luna: document.getElementById('fData').value, serviciu: document.getElementById('fServiciu').value, idxZi: document.getElementById('fIdx1').value, idxNoapte: document.getElementById('fIdx2').value, idxGaz: isG ? document.getElementById('fIdx1').value : '' };
+            Swal.fire({ title: 'Se salvează...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            google.script.run
+                .withSuccessHandler(() => {
+                    Swal.fire({ icon: 'success', title: 'Citire salvată!', timer: 2000, showConfirmButton: false });
+                    document.getElementById('fIdx1').value = ''; document.getElementById('fIdx2').value = '';
+                    refreshData();
+                    showPage('home', document.querySelector('.nav-item'));
+                })
+                .withFailureHandler(err => { Swal.fire({ icon: 'error', title: 'Nu s-a putut salva', text: String((err && err.message) || err) }); })
+                .saveData(p);
+        }
+
+        function refreshData() { google.script.run.withSuccessHandler(renderApp).withFailureHandler(() => {}).getSheetData(); }
+        window.addEventListener('ut-synced', refreshData);
+
+        function renderApp(data) {
+    window.LAST_ROWS = data;
+    const tbody = document.querySelector('#mainTable tbody');
+    const filter = document.getElementById('filterAn').value;
+    tbody.innerHTML = '';
+
+    let tE = 0, tG = 0, archE = 0, archG = 0;
+    let monthlyData = {};
+
+    const CICLU_LUNA = 4;  // mai
+    const CICLU_ZI = 22;
+    const azi = normalizeDate(new Date());
+
+    let anLimita = azi.getFullYear();
+    const limita_acest_an = new Date(anLimita, CICLU_LUNA, CICLU_ZI);
+    if (azi <= limita_acest_an) {
+        anLimita = anLimita - 1;
+    }
+    const LIMITA_DATA = new Date(anLimita, CICLU_LUNA, CICLU_ZI);
+
+    data.slice().reverse().forEach(row => {
+        if (!row[0]) return;
+
+        let d = parseLocalDate(row[0]);
+        if (!d || isNaN(d.getTime())) return;
+        d = normalizeDate(d);
+
+        const isG = row[1] === 'Gaz';
+        const consE = parseFloat(row[5]) || 0;
+        const consG = parseFloat(row[6]) || 0;
+
+        const isCurrent = (d > LIMITA_DATA);
+
+        if (isCurrent) {
+            tE += consE; tG += consG;
+            const mName = d.toLocaleString('ro-RO', { month: 'short' });
+            if (!monthlyData[mName]) monthlyData[mName] = { e: 0, g: 0 };
+            monthlyData[mName].e += consE; monthlyData[mName].g += consG;
+        } else {
+            archE += consE; archG += consG;
+        }
+
+        if ((filter === 'current' && isCurrent) || (filter === 'archive' && !isCurrent)) {
+            tbody.innerHTML += `<tr>
+                <td><b>${d.getDate()}.${d.getMonth()+1}</b></td>
+                <td><span class="badge ${isG ? 'badge-gas' : 'badge-elec'}">${row[1][0]}</span></td>
+                <td style="text-align:right"><b>${isG ? consG+' m³' : consE+' kWh'}</b></td>
+            </tr>`;
+        }
+    });
+
+    // Balanță arhivă
+    if (filter === 'archive') {
+        const totalPlatitE = 12 * config.plataE;
+        const totalPlatitG = 12 * (config.plataG + ASIGURARE_GAZ);
+        const balantaE = totalPlatitE - (archE * config.pretE);
+        const balantaG = totalPlatitG - ((archG * config.pretG) + (12 * ASIGURARE_GAZ));
+        tbody.innerHTML += `
+            <tr style="background:#f1f5f9; font-weight:800; border-top: 2px solid #cbd5e1;">
+                <td colspan="2">TOTAL</td><td style="text-align:right">${archE.toFixed(0)} kWh / ${archG.toFixed(0)} m³</td>
+            </tr>
+            <tr style="background:#fff7ed; font-weight:800;">
+                <td colspan="2">BALANȚĂ ELEC</td>
+                <td style="text-align:right; color: ${balantaE >= 0 ? '#16a34a' : '#dc2626'}">${balantaE.toFixed(2)} €</td>
+            </tr>
+            <tr style="background:#fef2f2; font-weight:800;">
+                <td colspan="2">BALANȚĂ GAZ</td>
+                <td style="text-align:right; color: ${balantaG >= 0 ? '#16a34a' : '#dc2626'}">${balantaG.toFixed(2)} €</td>
+            </tr>`;
+    }
+
+    // --- ACTUALIZARE LANDING PAGE ---
+    document.getElementById('lElec').innerText = tE.toFixed(0);
+    document.getElementById('lGaz').innerText = tG.toFixed(0);
+
+    // --- ACTUALIZARE UI ȘI PREDICȚIE ---
+    document.getElementById('currElec').innerText = tE.toFixed(0);
+    document.getElementById('currGaz').innerText = tG.toFixed(0);
+    document.getElementById('barElec').style.width = Math.min((tE/LIMITA_ELEC_KWH)*100, 100) + "%";
+    document.getElementById('barGaz').style.width = Math.min((tG/LIMITA_GAZ_M3)*100, 100) + "%";
+
+    // Calcul Predicție (Logica integrată aici)
+    const startObj = normalizeDate(parseLocalDate(config.startDate));
+    const diffTime = Math.abs(azi - startObj);
+    const zileTrecute = Math.max(1, diffTime / (1000 * 60 * 60 * 24));
+    const zileTotale = 365; // Ciclul anual
+    const estE = (tE / zileTrecute) * zileTotale;
+    const estG = (tG / zileTrecute) * zileTotale;
+
+    document.getElementById('predElec').innerHTML = `<span style="color:${estE <= LIMITA_ELEC_KWH ? '#10b981' : '#ef4444'}; font-weight:800;">${estE <= LIMITA_ELEC_KWH ? '✅' : '❌'} ${estE.toFixed(0)} kWh</span><br><small>Limită: ${LIMITA_ELEC_KWH.toFixed(0)}</small>`;
+    document.getElementById('predGaz').innerHTML = `<span style="color:${estG <= LIMITA_GAZ_M3 ? '#10b981' : '#ef4444'}; font-weight:800;">${estG <= LIMITA_GAZ_M3 ? '✅' : '❌'} ${estG.toFixed(0)} m³</span><br><small>Limită: ${LIMITA_GAZ_M3.toFixed(0)}</small>`;
+    
+    document.getElementById('lTargetElec').innerHTML = estE <= LIMITA_ELEC_KWH ? `✅ ${tE.toFixed(0)}/${LIMITA_ELEC_KWH.toFixed(0)}` : `⚠️ ${tE.toFixed(0)}/${LIMITA_ELEC_KWH.toFixed(0)}`;
+    document.getElementById('lTargetGaz').innerHTML = estG <= LIMITA_GAZ_M3 ? `✅ ${tG.toFixed(0)}/${LIMITA_GAZ_M3.toFixed(0)}` : `⚠️ ${tG.toFixed(0)}/${LIMITA_GAZ_M3.toFixed(0)}`;
+
+    // Profit
+    const luni = Math.max(1, diffTime / (1000 * 60 * 60 * 24 * 30));
+    const profit = ((luni * config.plataE) + (luni * (config.plataG + ASIGURARE_GAZ))) -
+                   ((tE * config.pretE) + (tG * config.pretG) + (luni * ASIGURARE_GAZ));
+
+    document.querySelector('.header').innerHTML = `<div style="flex: 1;"><h2 style="margin:0; font-size: 18px;">Salut, Gabriel!</h2><div style="margin-top:8px; background:#dcfce7; padding:6px 14px; border-radius:12px; font-weight:800; border: 1px solid #bbf7d0;">💰 Profit Curent: +${profit.toFixed(2)} €</div></div>`;
+
+    if (myChart) myChart.destroy();
+    myChart = new Chart(document.getElementById('consumptionChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(monthlyData),
+            datasets: [
+                { label: 'kWh', data: Object.keys(monthlyData).map(l => monthlyData[l].e), backgroundColor: '#f59e0b' },
+                { label: 'm³', data: Object.keys(monthlyData).map(l => monthlyData[l].g), backgroundColor: '#ef4444' }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+    </script>
+</body>
+</html>
