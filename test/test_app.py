@@ -34,6 +34,7 @@ try:
 
         check('landing: electricitate = 160+640', page.inner_text('#lElec') == '800', page.inner_text('#lElec'))
         check('landing: gaz = 500', page.inner_text('#lGaz') == '500', page.inner_text('#lGaz'))
+        check('landing: luna curenta, nu „Se incarca”', page.inner_text('#landing-month').strip().lower() in ('noiembrie 2026',), page.inner_text('#landing-month'))
         check('body are clasa ut-pwa (card sincronizare vizibil)', page.evaluate("document.body.classList.contains('ut-pwa')"))
         page.click('.btn-connect-white')
         page.wait_for_timeout(1000)

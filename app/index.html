@@ -98,7 +98,7 @@
     <div id="utilities-landing">
         <div style="text-align: center; margin-bottom: 30px;">
             <h2 style="font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -1px;">RESOURCE MONITOR</h2>
-            <div id="landing-month" class="status-text" style="color: var(--primary); font-weight: 800; font-size: 14px; text-transform: uppercase; margin-top: 5px;">Se încarcă...</div>
+            <div id="landing-month" class="status-text" style="color: var(--primary); font-weight: 800; font-size: 14px; text-transform: uppercase; margin-top: 5px;">&nbsp;</div>
         </div>
         <div class="orb-container">
             <div class="orb orb-electric"><span style="font-size: 10px; font-weight: 800; opacity: 0.5;">CURENT</span><span style="font-size: 18px; font-weight: 800;"><span id="lElec">0</span></span><div id="lTargetElec" style="font-size: 9px; font-weight: 800; margin-top: 5px;">---</div><span style="color: var(--elec); margin-top: 3px; font-size: 14px;">⚡</span></div>
@@ -192,6 +192,7 @@
             document.getElementById('cfgPretE').value = config.pretE;
             document.getElementById('cfgPretG').value = config.pretG;
             document.getElementById('fData').value = aziIso();
+            document.getElementById('landing-month').innerText = new Date().toLocaleString('ro-RO', { month: 'long', year: 'numeric' });
             refreshData();
         };
 
